@@ -96,10 +96,12 @@ try {
     <h3>Статистика по языкам:</h3>
 <div style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
     <?php foreach ($stats as $s): ?>
+       <?php if($s['count']>0):?>
         <div class="stat-item">
             <strong><?php echo htmlspecialchars($s['name']); ?>:</strong> 
             <?php echo $s['count']; ?> чел.
         </div>
+    <?php endif; ?>
     <?php endforeach; ?>
 </div>
 
