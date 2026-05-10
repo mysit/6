@@ -79,14 +79,14 @@ try {
     <meta charset="UTF-8">
     <title>Админка</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 30px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body { font-family: sans-serif; padding: 30px; }
+        .container { max-width: 1000px; margin: auto; padding: 20px; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background: #007bff; color: white; }
+        th { background: #aaaaaa; color: white; }
         tr:nth-child(even) { background: #f9f9f9; }
         .stats { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
-        .stat-item { background: #e9ecef; padding: 10px 15px; border-radius: 4px; border-left: 4px solid #007bff; }
+        .stat-item { background: #e9ecef; padding: 10px 15px; border-radius: 4px; }
         input, textarea { width: 100%; box-sizing: border-box; padding: 5px; }
         .btn-save { background: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }
         .btn-del { color: #dc3545; text-decoration: none; margin-left: 10px; font-size: 0.9em; }
