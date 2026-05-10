@@ -1,18 +1,12 @@
 <?php
-/**
- * admin.php — Панель администратора
- */
-
 $user = 'u82196';
 $pass = '4736526';
 $db_name = 'u82196';
 $host = 'localhost';
 
-// --- НАСТРОЙКИ ВХОДА (БЕЗ ХЕШИРОВАНИЯ ДЛЯ ТЕСТА) ---
 $admin_login = 'admin';
 $admin_pass  = '123';
 
-// Исправление для CGI/FastCGI (если переменные пусты)
 if (empty($_SERVER['PHP_AUTH_USER'])) {
     if (preg_match('/Basic\s+(.*)$/i', $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '', $matches)) {
         list($user_msg, $pw_msg) = explode(':', base64_decode($matches[1]));
@@ -37,7 +31,7 @@ try {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
     ]);
 
-    // --- УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ ---
+    //УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ
     if (isset($_GET['delete'])) {
         $id = (int)$_GET['delete'];
         // Сначала удаляем связи с языками
@@ -48,7 +42,7 @@ try {
         exit();
     }
 
-    // --- РЕДАКТИРОВАНИЕ ДАННЫХ ---
+    //РЕДАКТИРОВАНИЕ ДАННЫХ 
     if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_id'])) {
         $id = (int)$_POST['edit_id'];
         $stmt = $db->prepare("UPDATE application SET name=?, email=?, bio=? WHERE id=?");
@@ -57,7 +51,7 @@ try {
         exit();
     }
 
-    // --- СТАТИСТИКА ПО ЯЗЫКАМ ---
+    //СТАТИСТИКА ПО ЯЗЫКАМ
     // Считаем количество упоминаний каждого языка в таблице связей
     $stats = $db->query("
         SELECT language_id, COUNT(*) as count 
@@ -65,7 +59,7 @@ try {
         GROUP BY language_id
     ")->fetchAll();
 
-    // --- СПИСОК ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ---
+    //СПИСОК ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
     $users = $db->query("SELECT * FROM application ORDER BY id DESC")->fetchAll();
 
 } catch (PDOException $e) {
@@ -101,7 +95,7 @@ try {
     <div class="stats">
         <?php foreach ($stats as $s): ?>
             <div class="stat-item">
-                <strong>ID: <?php echo htmlspecialchars($s['language_id']); ?></strong> — <?php echo $s['count']; ?> чел.
+                <strong>ID: <?php echo htmlspecialchars($s['language']); ?></strong> — <?php echo $s['count']; ?> чел.
             </div>
         <?php endforeach; ?>
     </div>
