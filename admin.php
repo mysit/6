@@ -52,12 +52,14 @@ try {
     }
 
     //СТАТИСТИКА ПО ЯЗЫКАМ
-    // Считаем количество упоминаний каждого языка в таблице связей
-    $stats = $db->query("
-        SELECT language_id, COUNT(*) as count 
-        FROM application_languages 
-        GROUP BY language_id
-    ")->fetchAll();
+    $sql_stats = "
+        SELECT l.name, COUNT(al.application_id) as count 
+        FROM languages l
+        LEFT JOIN application_languages al ON l.id = al.language_id
+        GROUP BY l.id, l.name
+    ";
+    
+    $stats = $db->query($sql_stats)->fetchAll();
 
     //СПИСОК ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
     $users = $db->query("SELECT * FROM application ORDER BY id DESC")->fetchAll();
@@ -95,7 +97,7 @@ try {
     <div class="stats">
         <?php foreach ($stats as $s): ?>
             <div class="stat-item">
-                <strong>ID: <?php echo htmlspecialchars($s['language']); ?></strong> — <?php echo $s['count']; ?> чел.
+                <strong>ID: <?php echo htmlspecialchars($s['language_id']); ?></strong> — <?php echo $s['count']; ?> чел.
             </div>
         <?php endforeach; ?>
     </div>
