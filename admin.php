@@ -94,13 +94,14 @@ try {
     <h1>Панель администратора</h1>
 
     <h3>Статистика по языкам:</h3>
-    <div class="stats">
-        <?php foreach ($stats as $s): ?>
-            <div class="stat-item">
-                <strong>ID: <?php echo htmlspecialchars($s['language_id']); ?></strong> — <?php echo $s['count']; ?> чел.
-            </div>
-        <?php endforeach; ?>
-    </div>
+<div style="display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
+    <?php foreach ($stats as $s): ?>
+        <div class="stat-item">
+            <strong><?php echo htmlspecialchars($s['name']); ?>:</strong> 
+            <?php echo $s['count']; ?> чел.
+        </div>
+    <?php endforeach; ?>
+</div>
 
     <h3>Список пользователей:</h3>
     <table>
