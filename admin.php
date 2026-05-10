@@ -125,6 +125,12 @@ try {
                 <td>
                     <button type="submit" class="btn-save">OK</button>
                     <a href="admin.php?delete=<?php echo $u['id']; ?>" class="btn-del" onclick="return confirm('Удалить пользователя?')">Удалить</a>
-                </td>
+               </td>
             </form>
         </tr>
+        <?php endforeach; ?>
+    </table>
+    
+    <br>
+    <a href="index.php">← Назад к форме</a>
+</div>
