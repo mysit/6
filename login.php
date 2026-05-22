@@ -1,12 +1,8 @@
 <?php
-/**
- * Файл login.php: авторизация пользователя.
- */
-
-// Устанавливаем кодировку
+/
 header('Content-Type: text/html; charset=UTF-8');
 
-// Параметры подключения к БД (замените на свои, если они отличаются)
+// Параметры подключения к БД 
 $db_user = 'u82196';
 $db_pass = '4736526';
 $db_name = 'u82196';
@@ -15,26 +11,24 @@ $db_host = 'localhost';
 // Начинаем сессию
 session_start();
 
-// --- БЛОК 1: ОБРАБОТКА ВЫХОДА (LOGOUT) ---
+
 if (isset($_GET['do']) && $_GET['do'] == 'logout') {
-    // Очищаем сессию
     session_unset();
     session_destroy();
-    // Удаляем куку сессии
+
     setcookie(session_name(), '', time() - 3600, '/');
-    // Перенаправляем на страницу логина
     header('Location: login.php');
     exit();
 }
 
-// --- БЛОК 2: ЕСЛИ ПОЛЬЗОВАТЕЛЬ УЖЕ ВОШЕЛ ---
+
 if (!empty($_SESSION['login'])) {
     // Перенаправляем на главную, чтобы не входить дважды
     header('Location: ./');
     exit();
 }
 
-// --- БЛОК 3: ОБРАБОТКА POST-ЗАПРОСА (ПОПЫТКА ВХОДА) ---
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $login = $_POST['login'];
     $pass_from_form = $_POST['pass'];
@@ -49,14 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
             ]);
 
-            // Ищем пользователя по логину
+
             $stmt = $db->prepare("SELECT id, password FROM application WHERE login = ?");
             $stmt->execute([$login]);
             $user_row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Проверяем: пользователь найден? Пароль совпадает (с проверкой md5)?
+
             if ($user_row && $user_row['password'] == md5($pass_from_form)) {
-                // Успех! Записываем данные в сессию
                 $_SESSION['login'] = $login;
                 $_SESSION['uid'] = $user_row['id'];
 
@@ -72,7 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// --- БЛОК 4: ОТОБРАЖЕНИЕ ФОРМЫ (GET-ЗАПРОС) ---
 ?>
 
 <!DOCTYPE html>
