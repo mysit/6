@@ -1,204 +1,164 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
+session_start();
 
-$user = 'u82196';
-$pass = '4736526';
-$db_name = 'u82196';
-$host = 'localhost';
+// Самодельный автолоад классов (встроенные средства языка)
+spl_autoload_register(function ($class) {
+    $prefix = 'App\\';
+    $base_dir = __DIR__ . '/../src/';
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) return;
+    $relative_class = substr($class, $len);
+    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+    if (file_exists($file)) { require $file; }
+});
 
-if ($_SERVER['REQUEST_METHOD'] == 'GET') {
-    if (!empty($_COOKIE[session_name()])) {
-        session_start();
-    }
-    $messages = array();
+use App\Services\Validator;
+use App\Models\User;
 
-    if (!empty($_COOKIE['save'])) {
-        setcookie('save', '', 100000);
-        setcookie('login', '', 100000);
-        setcookie('pass', '', 100000);
-        $messages[] = '<div class="success-msg">Спасибо, результаты сохранены.</div>';
-        if (!empty($_COOKIE['pass'])) {
-            $messages[] = sprintf('Вы можете <a href="login.php">войти</a> с логином <strong>%s</strong>
-            и паролем <strong>%s</strong> для изменения данных.',
-            strip_tags($_COOKIE['login']),
-            strip_tags($_COOKIE['pass']));
-        }
-    }
+// --- АДАПТАЦИЯ ПОД СЕРВЕР КУБГУ (Супер-очистка любых подпапок) ---
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-    $errors = array();
-    $fields = ['fullName', 'email', 'gender', 'languages', 'bio', 'privacy'];
-    foreach ($fields as $f) {
-        $errors[$f] = !empty($_COOKIE[$f . '_error']);
-    }
+// Явно задаем базовый путь для КубГУ, чтобы работали редиректы ниже
+$scriptName = '/8/public';
 
-    if ($errors['fullName']) {
-        setcookie('fullName_error', '', 100000);
-        $messages[] = '<div class="error-msg">Имя заполнено неверно или пустое.</div>';
-    }
-    if ($errors['email']) {
-        setcookie('email_error', '', 100000);
-        $messages[] = '<div class="error-msg">Email указан некорректно.</div>';
-    }
-    if ($errors['languages']) {
-        setcookie('languages_error', '', 100000);
-        $messages[] = '<div class="error-msg">Выберите хотя бы один язык программирования.</div>';
-    }
-    if ($errors['bio']) {
-        setcookie('bio_error', '', 100000);
-        $messages[] = '<div class="error-msg">Расскажите что-нибудь о себе в биографии.</div>';
-    }
+// Скрипт может вызываться из разных вложенных папок (/8, /8/public, /8/public/index.php)
+$badPatterns = [
+    '/8/public/index.php',
+    '/8/public',
+    '/8'
+];
 
-    $values = array();
-    $all_fields = ['fullName', 'email', 'number', 'bdate', 'gender', 'bio', 'privacy'];
-    foreach ($all_fields as $f) {
-        $values[$f] = empty($_COOKIE[$f . '_value']) ? '' : $_COOKIE[$f . '_value'];
-    }
-    $values['languages'] = empty($_COOKIE['languages_value']) ? [] : explode(',', $_COOKIE['languages_value']);
-
-    // --- ИСПРАВЛЕННЫЙ БЛОК GET ---
-    if (empty($errors) && !empty($_COOKIE[session_name()]) && session_start() && !empty($_SESSION['login'])) {
-        try {
-            $db = new PDO("mysql:host=$host;dbname=$db_name", $user, $pass, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-            ]);
-
-            $stmt = $db->prepare("SELECT * FROM application WHERE login = ?");
-            $stmt->execute([$_SESSION['login']]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($row) {
-                $values['fullName'] = htmlspecialchars($row['name']);
-                $values['email']    = htmlspecialchars($row['email']);
-                $values['number']    = htmlspecialchars($row['number']);
-                $values['bdate']    = htmlspecialchars($row['bday']);
-                $values['gender']   = htmlspecialchars($row['sex']);
-                $values['bio']      = htmlspecialchars($row['bio']);
-                
-                $stmt_langs = $db->prepare("SELECT language_id FROM application_languages WHERE application_id = ?");
-                $stmt_langs->execute([$row['id']]);
-                $values['languages'] = $stmt_langs->fetchAll(PDO::FETCH_COLUMN);
-            }
-        } catch (PDOException $e) {
-            print('Ошибка: ' . $e->getMessage());
-            exit();
-        }
-        // printf перенесли внутрь IF, чтобы не ругался на пустую сессию
-        printf('Вход с логином %s, uid %d', $_SESSION['login'], $_SESSION['uid']);
-    }
-    // Конец блока GET
-    include('form.php');
-} 
-else {
-    // --- МЕТОД POST ---
-    $errors = FALSE;
-
-    if (empty($_POST['fullName'])) {
-        setcookie('fullName_error', '1', time() + 24 * 3600);
-        $errors = TRUE;
-    }
-    setcookie('fullName_value', $_POST['fullName'], time() + 30 * 24 * 3600);
-
-    if (empty($_POST['email']) || !filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
-        setcookie('email_error', '1', time() + 24 * 3600);
-        $errors = TRUE;
-    }
-    setcookie('email_value', $_POST['email'], time() + 30 * 24 * 3600);
-
-    if (empty($_POST['bio'])) {
-        setcookie('bio_error', '1', time() + 24 * 3600);
-        $errors = TRUE;
-    }
-    setcookie('bio_value', $_POST['bio'], time() + 30 * 24 * 3600);
-
-    if (empty($_POST['languages'])) {
-        setcookie('languages_error', '1', time() + 24 * 3600);
-        $errors = TRUE;
-    } else {
-        setcookie('languages_value', implode(',', $_POST['languages']), time() + 30 * 24 * 3600);
-    }
-
-    setcookie('number_value', $_POST['number'], time() + 30 * 24 * 3600);
-    setcookie('bdate_value', $_POST['bdate'], time() + 30 * 24 * 3600);
-    setcookie('gender_value', $_POST['gender'], time() + 30 * 24 * 3600);
-    setcookie('privacy_value', $_POST['privacy'], time() + 30 * 24 * 3600);
-
-    if ($errors) {
-        header('Location: index.php');
-        exit();
-    }
-    else {
-        setcookie('fullName_error', '', 100000);
-        setcookie('email_error', '', 100000);
-        setcookie('languages_error', '', 100000);
-        setcookie('bio_error', '', 100000);
-
-        try {
-            $db = new PDO("mysql:host=$host;dbname=$db_name", $user, $pass, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-            ]);
-
-            if (!empty($_COOKIE[session_name()]) && session_start() && !empty($_SESSION['login'])) {
-                $login = $_SESSION['login'];
-                // Исправлено: таблица application (было applications)
-                $stmt = $db->prepare("SELECT id FROM application WHERE login = ?");
-                $stmt->execute([$login]);
-                $user_id = $stmt->fetchColumn();
-
-                if($user_id){
-                    $sql = "UPDATE application SET
-                            name = ?,
-                            email = ?,
-                            number = ?,
-                            bday = ?,
-                            sex = ?,
-                            bio = ?
-                            WHERE id = ?"; // Исправлено: добавлена точка с запятой
-
-                    $stmt = $db->prepare($sql);
-                    $stmt->execute([
-                        $_POST['fullName'],
-                        $_POST['email'],
-                        $_POST['number'],
-                        $_POST['bdate'],
-                        $_POST['gender'],
-                        $_POST['bio'],
-                        $user_id
-                    ]);
-
-                    $stmt = $db->prepare("DELETE FROM application_languages WHERE application_id = ?");
-                    $stmt->execute([$user_id]);
-
-                    $stmt_l = $db->prepare("INSERT INTO application_languages (application_id, language_id) VALUES (?, ?)");
-                    foreach ($_POST['languages'] as $lang_id) {
-                        $stmt_l->execute([$user_id, $lang_id]);
-                    }
-                }
-            }
-            else {
-                // НОВЫЙ ПОЛЬЗОВАТЕЛЬ
-                $login = uniqid('user');
-                $pass_plain = rand(1000, 9999);
-                $pass_hash = md5($pass_plain);
-
-                setcookie('login', $login, time() + 30 * 24 * 3600);
-                setcookie('pass', $pass_plain, time() + 30 * 24 * 3600);
-
-                // Исправлено: добавлены login и password в INSERT
-                $stmt = $db->prepare("INSERT INTO application (name, email, number, bday, sex, bio, login, password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$_POST['fullName'], $_POST['email'], $_POST['number'], $_POST['bdate'], $_POST['gender'], $_POST['bio'], $login, $pass_hash]);
-
-                $id = $db->lastInsertId();
-
-                $stmt_l = $db->prepare("INSERT INTO application_languages (application_id, language_id) VALUES (?, ?)");
-                foreach ($_POST['languages'] as $l) {
-                    $stmt_l->execute([$id, $l]);
-                }
-            }
-
-            setcookie('save', '1');
-            header('Location: ./');
-        } catch (PDOException $e) {
-            die("Ошибка БД: " . $e->getMessage());
-        }
+foreach ($badPatterns as $pattern) {
+    if (strpos($requestUri, $pattern) === 0) {
+        $requestUri = substr($requestUri, strlen($pattern));
+        break;
     }
 }
+
+// Если после очистки осталась пустота или двойной слэш, приводим к стандарту "/"
+if (empty($requestUri) || $requestUri === '//') {
+    $requestUri = '/';
+}
+// -----------------------------------------------------------------
+
+$requestMethod = $_SERVER['REQUEST_METHOD'];
+
+// Поддержка эмуляции методов PUT через POST формы (для fallback-режима)
+if ($requestMethod === 'POST' && isset($_POST['_method'])) {
+    $requestMethod = strtoupper($_POST['_method']);
+}
+
+// Считываем данные в зависимости от формата (JSON или обычный POST)
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+$inputData = [];
+if (str_contains($contentType, 'application/json')) {
+    $inputData = json_decode(file_get_contents('php://input'), true) ?? [];
+} else {
+    $inputData = $_POST;
+}
+
+try {
+    $userModel = new User();
+} catch (\PDOException $e) {
+    header('Content-Type: application/json');
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Ошибка подключения к БД: ' . $e->getMessage()]);
+    exit;
+}
+
+// --- МАРШРУТЫ REST API ---
+
+// 1. POST /api/users — Регистрация нового (неавторизованного) пользователя
+if ($requestUri === '/api/users' && $requestMethod === 'POST') {
+    header('Content-Type: application/json');
+    $errors = Validator::validate($inputData);
+    if (!empty($errors)) {
+        http_response_code(422);
+        echo json_encode(['status' => 'error', 'errors' => $errors]);
+        exit;
+    }
+    $newUser = $userModel->create($inputData);
+    $_SESSION['user_id'] = $newUser['id']; // Имитируем авторизацию
+    
+    echo json_encode([
+        'status' => 'success',
+        'id' => $newUser['id'],
+        'login' => $newUser['login'],
+        'password' => $newUser['password'],
+        'profile_url' => $scriptName . '/profile?id=' . $newUser['id']
+    ]);
+    exit;
+}
+
+// 2. PUT /api/users/{id} — Обновление данных авторизованного пользователя
+if (preg_match('/^\/api\/users\/(\d+)$/', $requestUri, $matches) && $requestMethod === 'PUT') {
+    header('Content-Type: application/json');
+    $userId = (int)$matches[1];
+
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] !== $userId) {
+        http_response_code(403);
+        echo json_encode(['status' => 'error', 'message' => 'Доступ запрещен.']);
+        exit;
+    }
+
+    $errors = Validator::validate($inputData);
+    if (!empty($errors)) {
+        http_response_code(422);
+        echo json_encode(['status' => 'error', 'errors' => $errors]);
+        exit;
+    }
+
+    $userModel->update($userId, $inputData);
+    echo json_encode(['status' => 'success', 'message' => 'Данные обновлены по API!']);
+    exit;
+}
+
+// --- МАРШРУТЫ ДЛЯ FALLBACK-РЕЖИМА (БЕЗ JS) ---
+
+// 3. Синхронная обработка POST /register-fallback (без JS)
+if ($requestUri === '/register-fallback' && $requestMethod === 'POST') {
+    $errors = Validator::validate($inputData);
+    if (!empty($errors)) {
+        $_SESSION['form_errors'] = $errors;
+        $_SESSION['old_data'] = $inputData;
+        header('Location: ' . $scriptName . '/');
+        exit;
+    }
+    $newUser = $userModel->create($inputData);
+    $_SESSION['user_id'] = $newUser['id'];
+    $_SESSION['just_registered'] = $newUser;
+    header('Location: ' . $scriptName . '/profile?id=' . $newUser['id']);
+    exit;
+}
+
+// 4. Синхронная обработка PUT /update-fallback (без JS)
+if ($requestUri === '/update-fallback' && $requestMethod === 'PUT') {
+    $userId = (int)($inputData['user_id'] ?? 0);
+    if (!isset($_SESSION['user_id']) || $_SESSION['user_id'] !== $userId) {
+        die("Доступ запрещен");
+    }
+    $errors = Validator::validate($inputData);
+    if (!empty($errors)) {
+        $_SESSION['form_errors'] = $errors;
+        header('Location: ' . $scriptName . '/profile?id=' . $userId);
+        exit;
+    }
+    $userModel->update($userId, $inputData);
+    $_SESSION['flash_message'] = 'Данные успешно обновлены синхронно!';
+    header('Location: ' . $scriptName . '/profile?id=' . $userId);
+    exit;
+}
+
+// --- СТРАНИЦЫ HTML ---
+if ($requestUri === '/' || $requestUri === '/index.html') {
+    include __DIR__ . '/../src/Views/registration.php';
+    exit;
+}
+
+if ($requestUri === '/profile') {
+    include __DIR__ . '/../src/Views/profile.php';
+    exit;
+}
+
+http_response_code(404);
+echo "Страница не найдена. Запрошенный путь: " . htmlspecialchars($requestUri);
